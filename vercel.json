@@ -5,11 +5,5 @@
       "source": "/(.*)",
       "destination": "/index.js"
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/cek",
-      "schedule": "0 2,10 * * *"
-    }
   ]
 }
