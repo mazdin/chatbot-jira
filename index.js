@@ -17,7 +17,7 @@ app.post('/api/webhook', async (req, res) => {
 });
 
 // Cron job endpoint
-app.post('/api/cron/cek', async (req, res) => {
+app.get('/api/cron/cek', async (req, res) => {
     const authHeader = req.headers['authorization'];
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
         return res.status(401).send('Unauthorized');
