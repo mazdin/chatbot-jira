@@ -10,7 +10,7 @@ const bot = new TelegramBot(token, { polling: !isProduction });
 // Configuration for commands and their associated statuses
 const COMMAND_CONFIG = {
     '/cek': ['Picked Development', 'In Progress', 'Code Review', 'Feedback'],
-    '/testing': ['Testing', 'TESTING', 'Testing & Review', 'SIT', 'UAT', 'Internal Testing', 'FRONTEND TESTING'],
+    '/testing': ['Testing'],
     '/complete': ['Test Complete', 'TEST COMPLETE', 'TEST COMPLETED'],
     '/complite': ['Test Complete', 'TEST COMPLETE', 'TEST COMPLETED'], // Alias for typo
     '/done': ['Done', 'DONE']
