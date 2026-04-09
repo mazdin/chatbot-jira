@@ -45,46 +45,69 @@ function initTelegramBot() {
         { command: 'complete', description: 'Cek task status TEST COMPLETE' },
         { command: 'done', description: 'Cek task status DONE' }
     ]);
+}
 
-    // Keyboard configuration for persistent buttons
-    const keyboard = {
-        reply_markup: {
-            keyboard: [
-                ['/cek', '/testing'],
-                ['/complete', '/done']
-            ],
-            resize_keyboard: true,
-            one_time_keyboard: false
+/**
+ * Main Webhook Dispatcher
+ * Handles incoming updates from Telegram and routes them to the correct command
+ */
+async function handleWebhook(req, res) {
+    const update = req.body;
+    
+    if (!update || !update.message) {
+        return res.status(200).send('OK');
+    }
+
+    const msg = update.message;
+    const text = msg.text ? msg.text.trim() : '';
+    const chatId = msg.chat.id;
+
+    try {
+        // 1. Handle /start
+        if (text.startsWith('/start')) {
+            const keyboard = {
+                reply_markup: {
+                    keyboard: [
+                        ['/cek', '/testing'],
+                        ['/complete', '/done']
+                    ],
+                    resize_keyboard: true,
+                    one_time_keyboard: false
+                }
+            };
+            await bot.sendMessage(chatId, 'Halo! Saya Jira QA Bot. 🤖\n\nGunakan menu di bawah ini untuk mengecek task Anda:', keyboard);
+            return res.status(200).send('OK');
         }
-    };
 
-    // /start command
-    bot.onText(/\/start/, (msg) => {
-        const chatId = msg.chat.id;
-        bot.sendMessage(chatId, 'Halo! Saya Jira QA Bot. 🤖\n\nGunakan menu di bawah ini untuk mengecek task Anda:', keyboard);
-    });
-
-    // Handle all command configurations
-    Object.keys(COMMAND_CONFIG).forEach(command => {
-        const regex = new RegExp(`^${command}`);
-        bot.onText(regex, async (msg) => {
-            const statuses = COMMAND_CONFIG[command];
-            const title = `*Jira Task Summary (${command})*`;
-            await handleJiraCommand(msg, statuses, title);
-        });
-    });
-
-    // Handle plain text commands as well
-    bot.on('message', async (msg) => {
-        const text = msg.text ? msg.text.trim().toLowerCase() : '';
-        if (text === 'cek task') {
-            await handleJiraCommand(msg, COMMAND_CONFIG['/cek'], '*📋 Daftar Task (Sprint Aktif)*');
-        } else if (text === 'task testing') {
-            await handleJiraCommand(msg, COMMAND_CONFIG['/testing'], '*🧪 Task dalam Status TESTING*');
-        } else if (text === 'task done') {
-            await handleJiraCommand(msg, COMMAND_CONFIG['/done'], '*✅ Task Selesai (DONE)*');
+        // 2. Handle mapped commands
+        let matched = false;
+        for (const [command, statuses] of Object.entries(COMMAND_CONFIG)) {
+            if (text.startsWith(command)) {
+                const title = `*Jira Task Summary (${command})*`;
+                await handleJiraCommand(msg, statuses, title);
+                matched = true;
+                break;
+            }
         }
-    });
+
+        // 3. Handle plain text aliases if not matched yet
+        if (!matched) {
+            const lowerText = text.toLowerCase();
+            if (lowerText === 'cek task') {
+                await handleJiraCommand(msg, COMMAND_CONFIG['/cek'], '*📋 Daftar Task (Sprint Aktif)*');
+            } else if (lowerText === 'task testing') {
+                await handleJiraCommand(msg, COMMAND_CONFIG['/testing'], '*🧪 Task dalam Status TESTING*');
+            } else if (lowerText === 'task done') {
+                await handleJiraCommand(msg, COMMAND_CONFIG['/done'], '*✅ Task Selesai (DONE)*');
+            }
+        }
+
+        res.status(200).send('OK');
+    } catch (error) {
+        console.error('Webhook processing error:', error);
+        // Still send 200 to Telegram to prevent retries if the error is handled
+        res.status(200).send('OK');
+    }
 }
 
 /**
@@ -181,13 +204,7 @@ function formatTelegramResponse(title, tasks, statusData, targetStatuses) {
     return messages;
 }
 
-/**
- * Handle incoming updates via Webhook
- */
-function handleWebhook(req, res) {
-    bot.processUpdate(req.body);
-    res.status(200).send('OK');
-}
+// handleWebhook is now defined above with the dispatcher logic
 
 module.exports = {
     initTelegramBot,

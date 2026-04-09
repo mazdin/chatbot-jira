@@ -12,7 +12,9 @@ app.use(express.json());
 telegramController.initTelegramBot();
 
 // Webhook endpoint
-app.post('/api/webhook', telegramController.handleWebhook);
+app.post('/api/webhook', async (req, res) => {
+    await telegramController.handleWebhook(req, res);
+});
 
 // Health check
 app.get('/health', (req, res) => {
