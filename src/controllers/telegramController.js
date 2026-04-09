@@ -13,7 +13,7 @@ const COMMAND_CONFIG = {
     '/testing': ['Testing'],
     '/complete': ['Test Complete'],
     '/complite': ['Test Complete'], // Alias for typo
-    '/done': ['Done', 'DONE']
+    '/done': ['Done']
 };
 
 /**
@@ -25,13 +25,7 @@ const STATUS_PRIORITY = {
     'CODE REVIEW': 3,
     'FEEDBACK': 4,
     'TESTING': 5,
-    'INTERNAL TESTING': 5,
-    'FRONTEND TESTING': 5,
-    'TESTING & REVIEW': 5,
-    'SIT': 5,
-    'UAT': 5,
     'TEST COMPLETE': 6,
-    'TEST COMPLETED': 6,
     'DONE': 7
 };
 
