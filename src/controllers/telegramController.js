@@ -215,7 +215,7 @@ async function handleScheduledCheck() {
         return;
     }
     const statuses = COMMAND_CONFIG['/cek'];
-    const title = '*⏰ Laporan Otomatis (9.00 & 17.00 WIB)*';
+    const title = '*⏰ Laporan Otomatis (10.00 & 17.00 WIB)*';
     await handleJiraCommand(targetChatId, statuses, title);
 }
 
