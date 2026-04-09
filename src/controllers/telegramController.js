@@ -3,7 +3,8 @@ const jiraService = require('../services/jiraService');
 require('dotenv').config();
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
-const bot = new TelegramBot(token, { polling: true });
+// Disable polling for Webhook mode
+const bot = new TelegramBot(token, { polling: false });
 
 // Configuration for commands and their associated statuses
 const COMMAND_CONFIG = {
@@ -153,6 +154,15 @@ function formatTelegramResponse(title, tasks, statusData, targetStatuses) {
     return messages;
 }
 
+/**
+ * Handle incoming updates via Webhook
+ */
+function handleWebhook(req, res) {
+    bot.processUpdate(req.body);
+    res.status(200).send('OK');
+}
+
 module.exports = {
-    initTelegramBot
+    initTelegramBot,
+    handleWebhook
 };

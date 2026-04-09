@@ -5,13 +5,32 @@ const telegramController = require('./src/controllers/telegramController');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize Telegram Bot
+// Body parser for Telegram Webhook
+app.use(express.json());
+
+// Initialize Telegram Bot commands
 telegramController.initTelegramBot();
+
+// Webhook endpoint
+app.post('/api/webhook', telegramController.handleWebhook);
 
 // Health check
 app.get('/health', (req, res) => {
     res.status(200).send('Jira QA Telegram Bot is alive!');
 });
+
+// Root route
+app.get('/', (req, res) => {
+    res.send('Jira QA Telegram Bot is running on Vercel!');
+});
+
+module.exports = app;
+
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+    });
+}
 
 // Proactive Trigger (Optional, based on requirements)
 // This can be used to manually trigger a summary push to the space
