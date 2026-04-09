@@ -9,11 +9,11 @@ const bot = new TelegramBot(token, { polling: !isProduction });
 
 // Configuration for commands and their associated statuses
 const COMMAND_CONFIG = {
-    '/cek': ['PICKED DEVELOPMENT', 'IN PROGRESS', 'CODE REVIEW', 'FEEDBACK'],
-    '/testing': ['TESTING'],
-    '/complete': ['TEST COMPLETE'],
-    '/complite': ['TEST COMPLETE'], // Alias for typo
-    '/done': ['DONE']
+    '/cek': ['Picked Development', 'In Progress', 'Code Review', 'Feedback'],
+    '/testing': ['Testing', 'TESTING', 'Testing & Review', 'SIT', 'UAT', 'Internal Testing', 'FRONTEND TESTING'],
+    '/complete': ['Test Complete', 'TEST COMPLETE', 'TEST COMPLETED'],
+    '/complite': ['Test Complete', 'TEST COMPLETE', 'TEST COMPLETED'], // Alias for typo
+    '/done': ['Done', 'DONE']
 };
 
 /**
@@ -25,7 +25,13 @@ const STATUS_PRIORITY = {
     'CODE REVIEW': 3,
     'FEEDBACK': 4,
     'TESTING': 5,
+    'INTERNAL TESTING': 5,
+    'FRONTEND TESTING': 5,
+    'TESTING & REVIEW': 5,
+    'SIT': 5,
+    'UAT': 5,
     'TEST COMPLETE': 6,
+    'TEST COMPLETED': 6,
     'DONE': 7
 };
 
