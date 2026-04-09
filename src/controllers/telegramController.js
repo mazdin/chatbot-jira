@@ -73,26 +73,32 @@ async function handleWebhook(req, res) {
             return res.status(200).send('OK');
         }
 
-        // 2. Handle mapped commands
+        // 2. Handle /myid
+        if (text.startsWith('/myid')) {
+            await bot.sendMessage(chatId, `ID Chat Anda adalah: \`${chatId}\``, { parse_mode: 'Markdown' });
+            return res.status(200).send('OK');
+        }
+
+        // 3. Handle mapped commands
         let matched = false;
         for (const [command, statuses] of Object.entries(COMMAND_CONFIG)) {
             if (text.startsWith(command)) {
                 const title = `*Jira Task Summary (${command})*`;
-                await handleJiraCommand(msg, statuses, title);
+                await handleJiraCommand(chatId, statuses, title);
                 matched = true;
                 break;
             }
         }
 
-        // 3. Handle plain text aliases if not matched yet
+        // 4. Handle plain text aliases if not matched yet
         if (!matched) {
             const lowerText = text.toLowerCase();
             if (lowerText === 'cek task') {
-                await handleJiraCommand(msg, COMMAND_CONFIG['/cek'], '*📋 Daftar Task (Sprint Aktif)*');
+                await handleJiraCommand(chatId, COMMAND_CONFIG['/cek'], '*📋 Daftar Task (Sprint Aktif)*');
             } else if (lowerText === 'task testing') {
-                await handleJiraCommand(msg, COMMAND_CONFIG['/testing'], '*🧪 Task dalam Status TESTING*');
+                await handleJiraCommand(chatId, COMMAND_CONFIG['/testing'], '*🧪 Task dalam Status TESTING*');
             } else if (lowerText === 'task done') {
-                await handleJiraCommand(msg, COMMAND_CONFIG['/done'], '*✅ Task Selesai (DONE)*');
+                await handleJiraCommand(chatId, COMMAND_CONFIG['/done'], '*✅ Task Selesai (DONE)*');
             }
         }
 
@@ -107,8 +113,7 @@ async function handleWebhook(req, res) {
 /**
  * Common logic to fetch, sort, count, and send to Telegram
  */
-async function handleJiraCommand(msg, statuses, title) {
-    const chatId = msg.chat.id;
+async function handleJiraCommand(chatId, statuses, title) {
     try {
         let tasks = await jiraService.getMyTasks(statuses);
         
@@ -200,7 +205,22 @@ function formatTelegramResponse(title, tasks, statusData, targetStatuses) {
 
 // handleWebhook is now defined above with the dispatcher logic
 
+/**
+ * Triggered by Cron jobs to send automatic /cek
+ */
+async function handleScheduledCheck() {
+    const targetChatId = process.env.TELEGRAM_CHAT_ID;
+    if (!targetChatId) {
+        console.error('Scheduled check failed: TELEGRAM_CHAT_ID not configured');
+        return;
+    }
+    const statuses = COMMAND_CONFIG['/cek'];
+    const title = '*⏰ Laporan Otomatis (9.00 & 17.00 WIB)*';
+    await handleJiraCommand(targetChatId, statuses, title);
+}
+
 module.exports = {
     initTelegramBot,
-    handleWebhook
+    handleWebhook,
+    handleScheduledCheck
 };

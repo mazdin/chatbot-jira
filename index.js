@@ -16,6 +16,22 @@ app.post('/api/webhook', async (req, res) => {
     await telegramController.handleWebhook(req, res);
 });
 
+// Cron job endpoint
+app.post('/api/cron/cek', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        return res.status(401).send('Unauthorized');
+    }
+    
+    try {
+        await telegramController.handleScheduledCheck();
+        res.status(200).send('Cron processed');
+    } catch (error) {
+        console.error('Cron error:', error);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
 // Health check
 app.get('/health', (req, res) => {
     res.status(200).send('Jira QA Telegram Bot is alive!');
