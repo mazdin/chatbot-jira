@@ -128,7 +128,7 @@ async function handleJiraCommand(msg, statuses, title) {
         // Generate counts and category breakdown per status
         const statusData = {};
         statuses.forEach(s => {
-            statusData[s] = { count: 0, tr: 0, tc: 0 };
+            statusData[s.toUpperCase()] = { count: 0, tr: 0, tc: 0 };
         });
 
         tasks.forEach(task => {
@@ -170,7 +170,7 @@ function formatTelegramResponse(title, tasks, statusData, targetStatuses) {
     header += `📊 *Total: ${tasks.length} Task*\n\n`;
     
     targetStatuses.forEach(s => {
-        const data = statusData[s] || { count: 0, tr: 0, tc: 0 };
+        const data = statusData[s.toUpperCase()] || { count: 0, tr: 0, tc: 0 };
         header += `📍 *${s}*: ${data.count}`;
         if (data.tr > 0 || data.tc > 0) {
             header += ` (TR: ${data.tr}, TC: ${data.tc})`;
