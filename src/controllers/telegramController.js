@@ -1,5 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
 const jiraService = require('../services/jiraService');
+const googleChatService = require('../services/googleChatService');
 require('dotenv').config();
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -149,7 +150,15 @@ async function handleJiraCommand(chatId, statuses, title) {
         const messages = formatTelegramResponse(title, tasks, statusData, statuses);
         
         for (const message of messages) {
+            // Send to Telegram
             await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+            
+            // Mirror to Google Chat if configured
+            if (process.env.GOOGLE_CHAT_WEBHOOK) {
+                // Clean up markdown escapes for Google Chat display
+                const cleanMessage = message.replace(/\\([_*`\[\]\(\)])/g, '$1');
+                await googleChatService.sendMessage(cleanMessage);
+            }
         }
     } catch (error) {
         console.error('Error in Telegram Bot:', error);
