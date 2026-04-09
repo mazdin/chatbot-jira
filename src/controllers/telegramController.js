@@ -3,8 +3,9 @@ const jiraService = require('../services/jiraService');
 require('dotenv').config();
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
-// Disable polling for Webhook mode
-const bot = new TelegramBot(token, { polling: false });
+// Enable polling for local testing, disable for Webhook mode (Vercel/Production)
+const isProduction = process.env.VERCEL || process.env.NODE_ENV === 'production';
+const bot = new TelegramBot(token, { polling: !isProduction });
 
 // Configuration for commands and their associated statuses
 const COMMAND_CONFIG = {
@@ -29,12 +30,32 @@ const STATUS_PRIORITY = {
 };
 
 function initTelegramBot() {
-    console.log('Telegram Bot updated and polling...');
+    console.log('Telegram Bot configured for Webhooks.');
+
+    // Set the command menu (the '/' button menu)
+    bot.setMyCommands([
+        { command: 'cek', description: 'Cek task PICKED DEVELOPMENT - FEEDBACK' },
+        { command: 'testing', description: 'Cek task status TESTING' },
+        { command: 'complete', description: 'Cek task status TEST COMPLETE' },
+        { command: 'done', description: 'Cek task status DONE' }
+    ]);
+
+    // Keyboard configuration for persistent buttons
+    const keyboard = {
+        reply_markup: {
+            keyboard: [
+                ['/cek', '/testing'],
+                ['/complete', '/done']
+            ],
+            resize_keyboard: true,
+            one_time_keyboard: false
+        }
+    };
 
     // /start command
     bot.onText(/\/start/, (msg) => {
         const chatId = msg.chat.id;
-        bot.sendMessage(chatId, 'Halo! Saya Jira QA Bot. 🤖\n\nGunakan perintah berikut:\n/cek - Status PICKED DEVELOPMENT sampai FEEDBACK\n/testing - Status TESTING\n/complete - Status TEST COMPLETE\n/done - Status DONE');
+        bot.sendMessage(chatId, 'Halo! Saya Jira QA Bot. 🤖\n\nGunakan menu di bawah ini untuk mengecek task Anda:', keyboard);
     });
 
     // Handle all command configurations
