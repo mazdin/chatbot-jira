@@ -11,8 +11,8 @@ const bot = new TelegramBot(token, { polling: !isProduction });
 const COMMAND_CONFIG = {
     '/cek': ['Picked Development', 'In Progress', 'Code Review', 'Feedback'],
     '/testing': ['Testing'],
-    '/complete': ['Test Complete', 'TEST COMPLETE', 'TEST COMPLETED'],
-    '/complite': ['Test Complete', 'TEST COMPLETE', 'TEST COMPLETED'], // Alias for typo
+    '/complete': ['Test Complete'],
+    '/complite': ['Test Complete'], // Alias for typo
     '/done': ['Done', 'DONE']
 };
 
