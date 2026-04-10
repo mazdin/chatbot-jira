@@ -138,7 +138,7 @@ async function handleIssueCommand(chatId) {
     try {
         const project = 'SBXS';
         const type = 'Issue';
-        const title = `*📋 Issue Type: ${type} (Project ${project})*`;
+        const title = `📋 Issue Type: ${type} (Project ${project})`;
         
         let tasks = await jiraService.getProjectIssuesByType(project, type);
         
@@ -152,22 +152,28 @@ async function handleIssueCommand(chatId) {
         });
 
         await processAndSendTasks(chatId, tasks, uniqueStatuses, title);
-    } catch (error) {
-        console.error('Error in handleIssueCommand:', error);
-        let errorDetail = 'Unknown error';
-        if (error.response) {
-            errorDetail = JSON.stringify(error.response.data);
-        } else if (error.message) {
-            errorDetail = error.message;
         } else {
             // Get all property names (including non-enumerable ones like 'message', 'stack')
-            errorDetail = JSON.stringify(error, Object.getOwnPropertyNames(error), 2);
+            const propNames = Object.getOwnPropertyNames(error);
+            errorDetail = JSON.stringify(error, propNames, 2);
         }
         const timestamp = new Date().toISOString();
-        // Limit message length to avoid Telegram limits
-        const safeError = errorDetail.substring(0, 3000);
-        bot.sendMessage(chatId, `❌ [${timestamp}] Maaf, terjadi kesalahan:\n\`\`\`json\n${safeError}\n\`\`\``, { parse_mode: 'Markdown' });
+        // Ensure errorDetail is a string
+        const errorStr = String(errorDetail || 'Unknown error');
+        const safeError = errorStr.substring(0, 3000);
+        bot.sendMessage(chatId, `❌ [${timestamp}] Maaf, terjadi kesalahan:\n<pre>${escapeHtml(safeError)}</pre>`, { parse_mode: 'HTML' });
     }
+}
+
+/**
+ * Escape HTML special characters
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 }
 
 /**
@@ -207,16 +213,24 @@ async function processAndSendTasks(chatId, tasks, statuses, title) {
         }
     });
 
-    const messages = formatTelegramResponse(title, tasks, statusData, statuses);
+    const isHtml = title.includes('Issue Type') || title.includes('<b>');
+    const messages = formatTelegramResponse(title, tasks, statusData, statuses, isHtml);
     
     for (const message of messages) {
         // Send to Telegram
-        await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+        const options = isHtml ? { parse_mode: 'HTML' } : { parse_mode: 'Markdown' };
+        await bot.sendMessage(chatId, message, options);
         
         // Mirror to Google Chat if configured
         if (process.env.GOOGLE_CHAT_WEBHOOK) {
-            // Clean up markdown escapes for Google Chat display
-            const cleanMessage = message.replace(/\\([_*`\[\]\(\)])/g, '$1');
+            let cleanMessage = message;
+            if (isHtml) {
+                // Strip HTML tags for Google Chat plain text
+                cleanMessage = message.replace(/<[^>]*>/g, '');
+            } else {
+                // Clean up markdown escapes
+                cleanMessage = message.replace(/\\([_*`\[\]\(\)])/g, '$1');
+            }
             await googleChatService.sendMessage(cleanMessage);
         }
     }
@@ -225,24 +239,24 @@ async function processAndSendTasks(chatId, tasks, statuses, title) {
 /**
  * Format tasks for Telegram Markdown, including counts and splitting if too long
  */
-function formatTelegramResponse(title, tasks, statusData, targetStatuses) {
+function formatTelegramResponse(title, tasks, statusData, targetStatuses, useHtml = false) {
     const MAX_LENGTH = 4000;
     const messages = [];
 
-    // Header with Counts and Breakdown
-    let header = `${title}\n`;
-    header += `📊 *Total: ${tasks.length} Task*\n`;
+    // Header logic
+    let header = useHtml ? `<b>${title}</b>\n` : `${title}\n`;
+    header += useHtml ? `📊 <b>Total: ${tasks.length} Task</b>\n` : `📊 *Total: ${tasks.length} Task*\n`;
     
-    // Add Sprint Dates if available from the first task
     if (tasks.length > 0 && tasks[0].startDate && tasks[0].endDate) {
-        header += `📅 *Range: ${tasks[0].startDate} sd ${tasks[0].endDate}*\n`;
+        const dateStr = `${tasks[0].startDate} sd ${tasks[0].endDate}`;
+        header += useHtml ? `📅 <b>Range: ${dateStr}</b>\n` : `📅 *Range: ${dateStr}*\n`;
     }
     header += '\n';
     
     targetStatuses.forEach(s => {
         if (!s) return;
         const data = statusData[s.toUpperCase()] || { count: 0, tr: 0, tc: 0 };
-        header += `📍 *${s}*: ${data.count}`;
+        header += useHtml ? `📍 <b>${s}</b>: ${data.count}` : `📍 *${s}*: ${data.count}`;
         if (data.tr > 0 || data.tc > 0) {
             header += ` (TR: ${data.tr}, TC: ${data.tc})`;
         }
@@ -258,10 +272,17 @@ function formatTelegramResponse(title, tasks, statusData, targetStatuses) {
     let currentMessage = header;
     
     tasks.forEach(task => {
-        let taskString = `🔹 *${task.key}* [${task.status}]\n`;
-        const safeSummary = task.summary.replace(/[_*`]/g, '\\$&');
-        taskString += `_${safeSummary}_\n`;
-        taskString += `🏃 Sprint: ${task.sprint}\n\n`;
+        let taskString = '';
+        if (useHtml) {
+            taskString = `🔹 <b>${task.key}</b> [${task.status}]\n`;
+            taskString += `<i>${escapeHtml(task.summary)}</i>\n`;
+            taskString += `🏃 Sprint: ${task.sprint}\n\n`;
+        } else {
+            taskString = `🔹 *${task.key}* [${task.status}]\n`;
+            const safeSummary = (task.summary || '').replace(/[_*`]/g, '\\$&');
+            taskString += `_${safeSummary}_\n`;
+            taskString += `🏃 Sprint: ${task.sprint}\n\n`;
+        }
 
         if ((currentMessage.length + taskString.length) > MAX_LENGTH) {
             messages.push(currentMessage);
