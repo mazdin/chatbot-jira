@@ -38,7 +38,8 @@ function initTelegramBot() {
         { command: 'cek', description: 'Cek task PICKED DEVELOPMENT - FEEDBACK' },
         { command: 'testing', description: 'Cek task status TESTING' },
         { command: 'complete', description: 'Cek task status TEST COMPLETE' },
-        { command: 'done', description: 'Cek task status DONE' }
+        { command: 'done', description: 'Cek task status DONE' },
+        { command: 'issue', description: 'Cek task type Issue (Project SBXS)' }
     ]);
 }
 
@@ -80,6 +81,12 @@ async function handleWebhook(req, res) {
             return res.status(200).send('OK');
         }
 
+        // 3. Handle /issue
+        if (text.startsWith('/issue')) {
+            await handleIssueCommand(chatId);
+            return res.status(200).send('OK');
+        }
+
         // 3. Handle mapped commands
         let matched = false;
         for (const [command, statuses] of Object.entries(COMMAND_CONFIG)) {
@@ -117,52 +124,85 @@ async function handleWebhook(req, res) {
 async function handleJiraCommand(chatId, statuses, title) {
     try {
         let tasks = await jiraService.getMyTasks(statuses);
-        
-        // Sort tasks by priority map
-        tasks.sort((a, b) => {
-            const priorityA = STATUS_PRIORITY[a.status.toUpperCase()] || 99;
-            const priorityB = STATUS_PRIORITY[b.status.toUpperCase()] || 99;
-            return priorityA - priorityB;
-        });
-
-        // Generate counts and category breakdown per status
-        const statusData = {};
-        statuses.forEach(s => {
-            statusData[s.toUpperCase()] = { count: 0, tr: 0, tc: 0 };
-        });
-
-        tasks.forEach(task => {
-            const statusKey = task.status.toUpperCase();
-            if (!statusData[statusKey]) {
-                statusData[statusKey] = { count: 0, tr: 0, tc: 0 };
-            }
-            
-            statusData[statusKey].count++;
-            
-            const summary = task.summary.toUpperCase();
-            if (summary.includes('QA TEST RUN')) {
-                statusData[statusKey].tr++;
-            } else if (summary.includes('QA TEST CASE')) {
-                statusData[statusKey].tc++;
-            }
-        });
-
-        const messages = formatTelegramResponse(title, tasks, statusData, statuses);
-        
-        for (const message of messages) {
-            // Send to Telegram
-            await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
-            
-            // Mirror to Google Chat if configured
-            if (process.env.GOOGLE_CHAT_WEBHOOK) {
-                // Clean up markdown escapes for Google Chat display
-                const cleanMessage = message.replace(/\\([_*`\[\]\(\)])/g, '$1');
-                await googleChatService.sendMessage(cleanMessage);
-            }
-        }
+        await processAndSendTasks(chatId, tasks, statuses, title);
     } catch (error) {
         console.error('Error in Telegram Bot:', error);
         bot.sendMessage(chatId, '❌ Maaf, terjadi kesalahan saat mengambil data dari Jira.');
+    }
+}
+
+/**
+ * Handle searching for specific project issues
+ */
+async function handleIssueCommand(chatId) {
+    try {
+        const project = 'SBXS';
+        const type = 'Issue';
+        const title = `*📋 Issue Type: ${type} (Project ${project})*`;
+        
+        let tasks = await jiraService.getProjectIssuesByType(project, type);
+        
+        // Get unique statuses from the tasks to show in the header
+        const uniqueStatuses = [...new Set(tasks.map(t => t.status))];
+        // Sort unique statuses based on priority if possible
+        uniqueStatuses.sort((a, b) => {
+            const priorityA = STATUS_PRIORITY[a.toUpperCase()] || 99;
+            const priorityB = STATUS_PRIORITY[b.toUpperCase()] || 99;
+            return priorityA - priorityB;
+        });
+
+        await processAndSendTasks(chatId, tasks, uniqueStatuses, title);
+    } catch (error) {
+        console.error('Error in handleIssueCommand:', error);
+        bot.sendMessage(chatId, '❌ Maaf, terjadi kesalahan saat mengambil data issue.');
+    }
+}
+
+/**
+ * Shared logic to process task list, count statuses, and send messages
+ */
+async function processAndSendTasks(chatId, tasks, statuses, title) {
+    // Sort tasks by priority map
+    tasks.sort((a, b) => {
+        const priorityA = STATUS_PRIORITY[a.status.toUpperCase()] || 99;
+        const priorityB = STATUS_PRIORITY[b.status.toUpperCase()] || 99;
+        return priorityA - priorityB;
+    });
+
+    // Generate counts and category breakdown per status
+    const statusData = {};
+    statuses.forEach(s => {
+        statusData[s.toUpperCase()] = { count: 0, tr: 0, tc: 0 };
+    });
+
+    tasks.forEach(task => {
+        const statusKey = task.status.toUpperCase();
+        if (!statusData[statusKey]) {
+            statusData[statusKey] = { count: 0, tr: 0, tc: 0 };
+        }
+        
+        statusData[statusKey].count++;
+        
+        const summary = (task.summary || '').toUpperCase();
+        if (summary.includes('QA TEST RUN')) {
+            statusData[statusKey].tr++;
+        } else if (summary.includes('QA TEST CASE')) {
+            statusData[statusKey].tc++;
+        }
+    });
+
+    const messages = formatTelegramResponse(title, tasks, statusData, statuses);
+    
+    for (const message of messages) {
+        // Send to Telegram
+        await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+        
+        // Mirror to Google Chat if configured
+        if (process.env.GOOGLE_CHAT_WEBHOOK) {
+            // Clean up markdown escapes for Google Chat display
+            const cleanMessage = message.replace(/\\([_*`\[\]\(\)])/g, '$1');
+            await googleChatService.sendMessage(cleanMessage);
+        }
     }
 }
 
@@ -175,7 +215,13 @@ function formatTelegramResponse(title, tasks, statusData, targetStatuses) {
 
     // Header with Counts and Breakdown
     let header = `${title}\n`;
-    header += `📊 *Total: ${tasks.length} Task*\n\n`;
+    header += `📊 *Total: ${tasks.length} Task*\n`;
+    
+    // Add Sprint Dates if available from the first task
+    if (tasks.length > 0 && tasks[0].startDate && tasks[0].endDate) {
+        header += `📅 *Range: ${tasks[0].startDate} sd ${tasks[0].endDate}*\n`;
+    }
+    header += '\n';
     
     targetStatuses.forEach(s => {
         const data = statusData[s.toUpperCase()] || { count: 0, tr: 0, tc: 0 };

@@ -38,12 +38,15 @@ async function fetchTasks(jql) {
             // Sprint might be in 'sprint' or 'customfield_10020'
             const sprintData = fields.sprint || fields.customfield_10020;
             let sprintName = 'No Sprint';
+            let startDate = null;
+            let endDate = null;
             
             if (sprintData) {
-                if (Array.isArray(sprintData) && sprintData.length > 0) {
-                    sprintName = sprintData[0].name;
-                } else if (sprintData.name) {
-                    sprintName = sprintData.name;
+                const sprintInfo = Array.isArray(sprintData) && sprintData.length > 0 ? sprintData[0] : sprintData;
+                if (sprintInfo.name) {
+                    sprintName = sprintInfo.name;
+                    startDate = sprintInfo.startDate ? sprintInfo.startDate.split('T')[0] : null;
+                    endDate = sprintInfo.endDate ? sprintInfo.endDate.split('T')[0] : null;
                 }
             }
 
@@ -51,7 +54,9 @@ async function fetchTasks(jql) {
                 key: issue.key,
                 summary: fields.summary,
                 status: fields.status.name,
-                sprint: sprintName
+                sprint: sprintName,
+                startDate: startDate,
+                endDate: endDate
             };
         });
     } catch (error) {
@@ -78,7 +83,19 @@ async function getMyTasks(status = null) {
     return await fetchTasks(jql);
 }
 
+/**
+ * Get issues for a specific project and type in active sprints
+ * @param {string} project 
+ * @param {string} type 
+ * @returns {Promise<Array>}
+ */
+async function getProjectIssuesByType(project, type) {
+    const jql = `project = "${project}" AND issuetype = "${type}" AND sprint in openSprints()`;
+    return await fetchTasks(jql);
+}
+
 module.exports = {
     fetchTasks,
-    getMyTasks
+    getMyTasks,
+    getProjectIssuesByType
 };
