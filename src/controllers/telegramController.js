@@ -161,8 +161,8 @@ async function handleIssueCommand(chatId) {
             errorDetail = error.message;
         } else {
             errorDetail = JSON.stringify(error);
-        }
-        bot.sendMessage(chatId, `❌ Maaf, terjadi kesalahan saat mengambil data issue:\n\`${errorDetail}\``, { parse_mode: 'Markdown' });
+        const timestamp = new Date().toISOString();
+        bot.sendMessage(chatId, `❌ [${timestamp}] Maaf, terjadi kesalahan saat mengambil data issue:\n\`${errorDetail}\``, { parse_mode: 'Markdown' });
     }
 }
 
