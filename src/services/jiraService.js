@@ -90,7 +90,7 @@ async function getMyTasks(status = null) {
  * @returns {Promise<Array>}
  */
 async function getProjectIssuesByType(project, type) {
-    const jql = `project = "${project}" AND issuetype = "${type}" AND sprint in openSprints()`;
+    const jql = `project = '${project}' AND issuetype = '${type}' AND sprint in openSprints()`;
     return await fetchTasks(jql);
 }
 

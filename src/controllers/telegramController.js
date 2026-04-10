@@ -160,10 +160,13 @@ async function handleIssueCommand(chatId) {
         } else if (error.message) {
             errorDetail = error.message;
         } else {
-            errorDetail = JSON.stringify(error);
+            // Get all property names (including non-enumerable ones like 'message', 'stack')
+            errorDetail = JSON.stringify(error, Object.getOwnPropertyNames(error), 2);
         }
         const timestamp = new Date().toISOString();
-        bot.sendMessage(chatId, `❌ [${timestamp}] Maaf, terjadi kesalahan saat mengambil data issue:\n\`${errorDetail}\``, { parse_mode: 'Markdown' });
+        // Limit message length to avoid Telegram limits
+        const safeError = errorDetail.substring(0, 3000);
+        bot.sendMessage(chatId, `❌ [${timestamp}] Maaf, terjadi kesalahan:\n\`\`\`json\n${safeError}\n\`\`\``, { parse_mode: 'Markdown' });
     }
 }
 
