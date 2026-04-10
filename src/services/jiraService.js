@@ -52,8 +52,8 @@ async function fetchTasks(jql) {
 
             return {
                 key: issue.key,
-                summary: fields.summary,
-                status: fields.status.name,
+                summary: fields.summary || 'No Summary',
+                status: fields.status ? fields.status.name : 'Unknown',
                 sprint: sprintName,
                 startDate: startDate,
                 endDate: endDate

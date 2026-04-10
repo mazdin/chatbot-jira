@@ -154,8 +154,15 @@ async function handleIssueCommand(chatId) {
         await processAndSendTasks(chatId, tasks, uniqueStatuses, title);
     } catch (error) {
         console.error('Error in handleIssueCommand:', error);
-        const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
-        bot.sendMessage(chatId, `❌ Maaf, terjadi kesalahan saat mengambil data issue:\n\`${errorMessage}\``, { parse_mode: 'Markdown' });
+        let errorDetail = 'Unknown error';
+        if (error.response) {
+            errorDetail = JSON.stringify(error.response.data);
+        } else if (error.message) {
+            errorDetail = error.message;
+        } else {
+            errorDetail = JSON.stringify(error);
+        }
+        bot.sendMessage(chatId, `❌ Maaf, terjadi kesalahan saat mengambil data issue:\n\`${errorDetail}\``, { parse_mode: 'Markdown' });
     }
 }
 
