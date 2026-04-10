@@ -34,13 +34,17 @@ function initTelegramBot() {
     console.log('Telegram Bot configured for Webhooks.');
 
     // Set the command menu (the '/' button menu)
-    bot.setMyCommands([
-        { command: 'cek', description: 'Cek task PICKED DEVELOPMENT - FEEDBACK' },
-        { command: 'testing', description: 'Cek task status TESTING' },
-        { command: 'complete', description: 'Cek task status TEST COMPLETE' },
-        { command: 'done', description: 'Cek task status DONE' },
-        { command: 'issue', description: 'Cek task type Issue (Project SBXS)' }
-    ]);
+    try {
+        bot.setMyCommands([
+            { command: 'cek', description: 'Cek task PICKED DEVELOPMENT - FEEDBACK' },
+            { command: 'testing', description: 'Cek task status TESTING' },
+            { command: 'complete', description: 'Cek task status TEST COMPLETE' },
+            { command: 'done', description: 'Cek task status DONE' },
+            { command: 'issue', description: 'Cek task type Issue (Project SBXS)' }
+        ]);
+    } catch (error) {
+        console.error('Error setting bot commands:', error.message);
+    }
 }
 
 /**
