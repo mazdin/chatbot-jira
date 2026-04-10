@@ -95,7 +95,8 @@ async function handleWebhook(req, res) {
         let matched = false;
         for (const [command, statuses] of Object.entries(COMMAND_CONFIG)) {
             if (text.startsWith(command)) {
-                const title = `*Jira Task Summary (${command})*`;
+                // Use HTML style title to trigger isHtml logic
+                const title = `<b>Jira Task Summary (${command})</b>`;
                 await handleJiraCommand(chatId, statuses, title);
                 matched = true;
                 break;
@@ -106,11 +107,11 @@ async function handleWebhook(req, res) {
         if (!matched) {
             const lowerText = text.toLowerCase();
             if (lowerText === 'cek task') {
-                await handleJiraCommand(chatId, COMMAND_CONFIG['/cek'], '*📋 Daftar Task (Sprint Aktif)*');
+                await handleJiraCommand(chatId, COMMAND_CONFIG['/cek'], '<b>📋 Daftar Task (Sprint Aktif)</b>');
             } else if (lowerText === 'task testing') {
-                await handleJiraCommand(chatId, COMMAND_CONFIG['/testing'], '*🧪 Task dalam Status TESTING*');
+                await handleJiraCommand(chatId, COMMAND_CONFIG['/testing'], '<b>🧪 Task dalam Status TESTING</b>');
             } else if (lowerText === 'task done') {
-                await handleJiraCommand(chatId, COMMAND_CONFIG['/done'], '*✅ Task Selesai (DONE)*');
+                await handleJiraCommand(chatId, COMMAND_CONFIG['/done'], '<b>✅ Task Selesai (DONE)</b>');
             }
         }
 
@@ -122,16 +123,34 @@ async function handleWebhook(req, res) {
     }
 }
 
-/**
- * Common logic to fetch, sort, count, and send to Telegram
- */
 async function handleJiraCommand(chatId, statuses, title) {
     try {
         let tasks = await jiraService.getMyTasks(statuses);
-        await processAndSendTasks(chatId, tasks, statuses, title);
+        
+        // Get unique statuses to show in the header
+        const uniqueStatuses = [...new Set(tasks.map(t => t.status))];
+        // Sort unique statuses based on priority if possible
+        uniqueStatuses.sort((a, b) => {
+            const priorityA = STATUS_PRIORITY[a.toUpperCase()] || 99;
+            const priorityB = STATUS_PRIORITY[b.toUpperCase()] || 99;
+            return priorityA - priorityB;
+        });
+
+        await processAndSendTasks(chatId, tasks, uniqueStatuses, title);
     } catch (error) {
-        console.error('Error in Telegram Bot:', error);
-        bot.sendMessage(chatId, '❌ Maaf, terjadi kesalahan saat mengambil data dari Jira.');
+        console.error('Error in handleJiraCommand:', error);
+        let errorDetail = 'Unknown error';
+        if (error.response) {
+            errorDetail = JSON.stringify(error.response.data);
+        } else if (error.message) {
+            errorDetail = error.message;
+        } else {
+            const propNames = Object.getOwnPropertyNames(error);
+            errorDetail = JSON.stringify(error, propNames, 2);
+        }
+        const timestamp = new Date().toISOString();
+        const safeError = String(errorDetail || 'Unknown error').substring(0, 3000);
+        bot.sendMessage(chatId, `❌ [${timestamp}] Maaf, terjadi kesalahan:\n<pre>${escapeHtml(safeError)}</pre>`, { parse_mode: 'HTML' });
     }
 }
 
@@ -142,7 +161,7 @@ async function handleIssueCommand(chatId) {
     try {
         const project = 'SBXS';
         const type = 'Issue';
-        const title = `📋 Issue Type: ${type} (Project ${project})`;
+        const title = `<b>📋 Issue Type: ${type} (Project ${project})</b>`;
         
         let tasks = await jiraService.getProjectIssuesByType(project, type);
         
