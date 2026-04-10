@@ -27,7 +27,7 @@ async function fetchTasks(jql) {
             params: {
                 jql: jql,
                 // Requesting all fields to find the sprint field
-                fields: 'key,summary,status,sprint,customfield_10020' 
+                fields: 'key,summary,status,sprint,created,customfield_10020' 
             }
         });
         
@@ -56,7 +56,8 @@ async function fetchTasks(jql) {
                 status: fields.status ? fields.status.name : 'Unknown',
                 sprint: sprintName,
                 startDate: startDate,
-                endDate: endDate
+                endDate: endDate,
+                createdDate: fields.created ? fields.created.split('T')[0] : null
             };
         });
     } catch (error) {

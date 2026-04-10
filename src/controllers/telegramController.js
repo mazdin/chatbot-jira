@@ -146,7 +146,14 @@ async function handleIssueCommand(chatId) {
         
         let tasks = await jiraService.getProjectIssuesByType(project, type);
         
-        // Get unique statuses from the tasks to show in the header
+        // Filter tasks by createdDate if sprint dates are available
+        if (tasks.length > 0 && tasks[0].startDate && tasks[0].endDate) {
+            const start = tasks[0].startDate;
+            const end = tasks[0].endDate;
+            tasks = tasks.filter(t => t.createdDate >= start && t.createdDate <= end);
+        }
+        
+        // Get unique statuses from the FILTERED tasks to show in the header
         const uniqueStatuses = [...new Set(tasks.map(t => t.status))];
         // Sort unique statuses based on priority if possible
         uniqueStatuses.sort((a, b) => {
