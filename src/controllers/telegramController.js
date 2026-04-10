@@ -154,7 +154,8 @@ async function handleIssueCommand(chatId) {
         await processAndSendTasks(chatId, tasks, uniqueStatuses, title);
     } catch (error) {
         console.error('Error in handleIssueCommand:', error);
-        bot.sendMessage(chatId, '❌ Maaf, terjadi kesalahan saat mengambil data issue.');
+        const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
+        bot.sendMessage(chatId, `❌ Maaf, terjadi kesalahan saat mengambil data issue:\n\`${errorMessage}\``, { parse_mode: 'Markdown' });
     }
 }
 
@@ -164,19 +165,23 @@ async function handleIssueCommand(chatId) {
 async function processAndSendTasks(chatId, tasks, statuses, title) {
     // Sort tasks by priority map
     tasks.sort((a, b) => {
-        const priorityA = STATUS_PRIORITY[a.status.toUpperCase()] || 99;
-        const priorityB = STATUS_PRIORITY[b.status.toUpperCase()] || 99;
+        const statusA = (a.status || '').toUpperCase();
+        const statusB = (b.status || '').toUpperCase();
+        const priorityA = STATUS_PRIORITY[statusA] || 99;
+        const priorityB = STATUS_PRIORITY[statusB] || 99;
         return priorityA - priorityB;
     });
 
     // Generate counts and category breakdown per status
     const statusData = {};
     statuses.forEach(s => {
-        statusData[s.toUpperCase()] = { count: 0, tr: 0, tc: 0 };
+        if (s) {
+            statusData[s.toUpperCase()] = { count: 0, tr: 0, tc: 0 };
+        }
     });
 
     tasks.forEach(task => {
-        const statusKey = task.status.toUpperCase();
+        const statusKey = (task.status || 'UNKNOWN').toUpperCase();
         if (!statusData[statusKey]) {
             statusData[statusKey] = { count: 0, tr: 0, tc: 0 };
         }
@@ -224,6 +229,7 @@ function formatTelegramResponse(title, tasks, statusData, targetStatuses) {
     header += '\n';
     
     targetStatuses.forEach(s => {
+        if (!s) return;
         const data = statusData[s.toUpperCase()] || { count: 0, tr: 0, tc: 0 };
         header += `📍 *${s}*: ${data.count}`;
         if (data.tr > 0 || data.tc > 0) {
