@@ -152,6 +152,13 @@ async function handleIssueCommand(chatId) {
         });
 
         await processAndSendTasks(chatId, tasks, uniqueStatuses, title);
+    } catch (error) {
+        console.error('Error in handleIssueCommand:', error);
+        let errorDetail = 'Unknown error';
+        if (error.response) {
+            errorDetail = JSON.stringify(error.response.data);
+        } else if (error.message) {
+            errorDetail = error.message;
         } else {
             // Get all property names (including non-enumerable ones like 'message', 'stack')
             const propNames = Object.getOwnPropertyNames(error);
